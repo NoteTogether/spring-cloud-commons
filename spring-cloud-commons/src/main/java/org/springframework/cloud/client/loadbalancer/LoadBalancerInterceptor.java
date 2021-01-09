@@ -30,6 +30,8 @@ import org.springframework.util.Assert;
  * @author Dave Syer
  * @author Ryan Baxter
  * @author William Tran
+ *
+ * 这里是对restTemplate添加的interceptor
  */
 public class LoadBalancerInterceptor implements ClientHttpRequestInterceptor {
 

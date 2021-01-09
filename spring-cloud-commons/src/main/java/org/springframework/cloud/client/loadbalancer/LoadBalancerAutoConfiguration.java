@@ -42,6 +42,9 @@ import org.springframework.web.client.RestTemplate;
  * @author Dave Syer
  * @author Will Tran
  * @author Gang Li
+ * @author Olga Maciaszek-Sharma
+ *
+ * 自动装配client端的loadBalance, 不过这是阻塞的.
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(RestTemplate.class)
@@ -56,6 +59,8 @@ public class LoadBalancerAutoConfiguration {
 	@Autowired(required = false)
 	private List<LoadBalancerRequestTransformer> transformers = Collections.emptyList();
 
+	// 这里是加载lb的templateInitializer: 拿到templateCustomizerList之后,
+	// 把customizer里面的loadBalancerInterceptor都放进restTemplate里面.
 	@Bean
 	public SmartInitializingSingleton loadBalancedRestTemplateInitializerDeprecated(
 			final ObjectProvider<List<RestTemplateCustomizer>> restTemplateCustomizers) {
@@ -68,6 +73,7 @@ public class LoadBalancerAutoConfiguration {
 		});
 	}
 
+	// 这里还不知道loadBalancerClient是干什么的.
 	@Bean
 	@ConditionalOnMissingBean
 	public LoadBalancerRequestFactory loadBalancerRequestFactory(
@@ -75,10 +81,13 @@ public class LoadBalancerAutoConfiguration {
 		return new LoadBalancerRequestFactory(loadBalancerClient, this.transformers);
 	}
 
-	@Configuration(proxyBeanMethods = false)
+	// 这里是loadBalancerInterceptor, 在缺少RetryTemplate的时候就用restTemplate
+	// 负责往restTemplate塞loadBalancerInterceptor
+	@Configuration(proxyBeanMethods = false) // 这里取消代理是干什么???
 	@ConditionalOnMissingClass("org.springframework.retry.support.RetryTemplate")
 	static class LoadBalancerInterceptorConfig {
 
+		// 1. 先搞一个loadbalanceInterceptor
 		@Bean
 		public LoadBalancerInterceptor loadBalancerInterceptor(
 				LoadBalancerClient loadBalancerClient,
@@ -86,6 +95,8 @@ public class LoadBalancerAutoConfiguration {
 			return new LoadBalancerInterceptor(loadBalancerClient, requestFactory);
 		}
 
+		// 2. 根据loadBalancerInterceptor创建一个restTemplateCustomizer:
+		// 		这个customizer: 负责把interceptor放在restTemplate的interceptorList里面.
 		@Bean
 		@ConditionalOnMissingBean
 		public RestTemplateCustomizer restTemplateCustomizer(
@@ -100,8 +111,11 @@ public class LoadBalancerAutoConfiguration {
 
 	}
 
+
+	// =============== 下面是 RetryTemplate 相关的load balance.
 	/**
 	 * Auto configuration for retry mechanism.
+	 * 重试机制
 	 */
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnClass(RetryTemplate.class)
