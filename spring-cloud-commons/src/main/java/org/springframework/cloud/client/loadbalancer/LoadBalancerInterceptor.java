@@ -30,8 +30,10 @@ import org.springframework.util.Assert;
  * @author Dave Syer
  * @author Ryan Baxter
  * @author William Tran
- *
+ * <p>
  * 这里是对restTemplate添加的interceptor
+ * <p>
+ * 这个是实现的spring的拦截器接口: Intercepts client-side HTTP requests, 用户端的.
  */
 public class LoadBalancerInterceptor implements ClientHttpRequestInterceptor {
 
@@ -40,7 +42,7 @@ public class LoadBalancerInterceptor implements ClientHttpRequestInterceptor {
 	private LoadBalancerRequestFactory requestFactory;
 
 	public LoadBalancerInterceptor(LoadBalancerClient loadBalancer,
-			LoadBalancerRequestFactory requestFactory) {
+								   LoadBalancerRequestFactory requestFactory) {
 		this.loadBalancer = loadBalancer;
 		this.requestFactory = requestFactory;
 	}
@@ -50,13 +52,19 @@ public class LoadBalancerInterceptor implements ClientHttpRequestInterceptor {
 		this(loadBalancer, new LoadBalancerRequestFactory(loadBalancer));
 	}
 
+	// 这就是拦截增强方法:
 	@Override
-	public ClientHttpResponse intercept(final HttpRequest request, final byte[] body,
+	public ClientHttpResponse intercept(
+			final HttpRequest request,
+			final byte[] body,
 			final ClientHttpRequestExecution execution) throws IOException {
+
 		final URI originalUri = request.getURI();
 		String serviceName = originalUri.getHost();
-		Assert.state(serviceName != null,
-				"Request URI does not contain a valid hostname: " + originalUri);
+		Assert.state(serviceName != null, "Request URI does not contain a valid hostname: " + originalUri);
+
+		// 1. 把request, body和execution包装成新的request.
+		// 2. 拿到serviceName就交给loadBalancerClient执行了.
 		return this.loadBalancer.execute(serviceName,
 				this.requestFactory.createRequest(request, body, execution));
 	}

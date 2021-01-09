@@ -28,16 +28,18 @@ import org.springframework.http.client.ClientHttpResponse;
  * to the intercepted {@link HttpRequest}.
  *
  * @author William Tran
- *
+ * <p>
+ * 负责拦截HttpRequest, 使用LoadBalancerRequestTransformer 创建LoadBalancerRequest
  */
 public class LoadBalancerRequestFactory {
 
 	private LoadBalancerClient loadBalancer;
 
+	// TODO 这些transformer是干什么的????
 	private List<LoadBalancerRequestTransformer> transformers;
 
 	public LoadBalancerRequestFactory(LoadBalancerClient loadBalancer,
-			List<LoadBalancerRequestTransformer> transformers) {
+									  List<LoadBalancerRequestTransformer> transformers) {
 		this.loadBalancer = loadBalancer;
 		this.transformers = transformers;
 	}
@@ -46,20 +48,28 @@ public class LoadBalancerRequestFactory {
 		this.loadBalancer = loadBalancer;
 	}
 
+	// 把httpRequest包装成LoadBalancerRequest
 	public LoadBalancerRequest<ClientHttpResponse> createRequest(
 			final HttpRequest request, final byte[] body,
 			final ClientHttpRequestExecution execution) {
-		return instance -> {
-			HttpRequest serviceRequest = new ServiceRequestWrapper(request, instance,
-					this.loadBalancer);
-			if (this.transformers != null) {
-				for (LoadBalancerRequestTransformer transformer : this.transformers) {
-					serviceRequest = transformer.transformRequest(serviceRequest,
-							instance);
-				}
-			}
-			return execution.execute(serviceRequest, body);
-		};
+		return
+				// 这就是一个loadBalancerRequest, request只有一个apply方法, 接收一个instance, 然后执行.
+				instance
+						// apply()方法
+						-> {
+					// 1. 把httpRequest包装起来, 包含loadBalancerClient和serviceInstance
+					HttpRequest serviceRequest = new ServiceRequestWrapper(request, instance,
+							this.loadBalancer);
+					// 2. 把transformerList里的transformer依次应用到serviceRequestWrapper.
+					if (this.transformers != null) {
+						for (LoadBalancerRequestTransformer transformer : this.transformers) {
+							serviceRequest = transformer.transformRequest(serviceRequest,
+									instance);
+						}
+					}
+					// 3. request真正执行: 去executor执行.
+					return execution.execute(serviceRequest, body);
+				};
 	}
 
 }
