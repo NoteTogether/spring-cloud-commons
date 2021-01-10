@@ -48,7 +48,7 @@ import org.springframework.web.client.RestTemplate;
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(RestTemplate.class)
-@ConditionalOnBean(LoadBalancerClient.class)
+@ConditionalOnBean(LoadBalancerClient.class)  // 必须要有loadBalancerClient的bean之后才能用.
 @EnableConfigurationProperties(LoadBalancerRetryProperties.class)
 public class LoadBalancerAutoConfiguration {
 

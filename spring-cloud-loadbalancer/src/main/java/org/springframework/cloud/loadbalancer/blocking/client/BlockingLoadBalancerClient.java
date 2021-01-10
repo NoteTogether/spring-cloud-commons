@@ -35,6 +35,8 @@ import org.springframework.util.ReflectionUtils;
  *
  * @author Olga Maciaszek-Sharma
  * @since 2.2.0
+ *
+ * loadBalancerClient的默认实现. 
  */
 public class BlockingLoadBalancerClient implements LoadBalancerClient {
 
